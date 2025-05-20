@@ -23,3 +23,11 @@ app.listen(PORT, () => {
 const protectedRoutes = require('./routes/protectedRoutes');
 app.use('/api', protectedRoutes);
 // This code imports and uses protected routes from a separate file.
+
+const tutorApplicationRoutes = require('./routes/tutorApplicationRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+app.use('/api', tutorApplicationRoutes);
+app.use('/api', adminRoutes);
+// This code imports and uses tutor application and admin routes from separate files.
+// It allows the server to handle requests related to tutor applications and admin functionalities.
