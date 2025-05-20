@@ -19,3 +19,7 @@ app.listen(PORT, () => {
 // This code sets up an Express server with CORS and JSON parsing middleware.
 // It also imports and uses authentication routes from a separate file.
 // The server listens on a specified port, defaulting to 5000 if not provided in the environment variables.
+
+const protectedRoutes = require('./routes/protectedRoutes');
+app.use('/api', protectedRoutes);
+// This code imports and uses protected routes from a separate file.
