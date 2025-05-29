@@ -152,3 +152,62 @@ router.patch('/sessions/:id/cancel', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to cancel session.' });
   }
 });
+
+router.patch('/sessions/:id/reschedule', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { new_time } = req.body;
+
+  try {
+    const sessionRes = await pool.query(`SELECT * FROM sessions WHERE id = $1`, [id]);
+    if (sessionRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Session not found.' });
+    }
+
+    const session = sessionRes.rows[0];
+    const userIsOwner = req.user.id === session.student_id || req.user.id === session.tutor_id;
+    if (!userIsOwner) {
+      return res.status(403).json({ error: 'You can only reschedule your own session.' });
+    }
+
+    // Check if new time is valid
+    const newDate = new Date(new_time);
+    const dayOfWeek = newDate.toLocaleString('en-US', { weekday: 'long' });
+    const hour = newDate.toTimeString().split(' ')[0];
+
+    // Check tutor availability
+    const availability = await pool.query(`
+      SELECT * FROM tutor_availability
+      WHERE tutor_id = $1 AND day_of_week = $2
+      AND start_time <= $3::time AND end_time > $3::time
+    `, [session.tutor_id, dayOfWeek, hour]);
+
+    if (availability.rows.length === 0) {
+      return res.status(400).json({ error: 'Tutor is not available at the new time.' });
+    }
+
+    // Check for conflict
+    const conflict = await pool.query(`
+      SELECT * FROM sessions
+      WHERE tutor_id = $1 AND id != $2
+      AND status IN ('scheduled', 'completed')
+      AND scheduled_time BETWEEN $3 AND ($3::timestamp + interval '59 minutes')
+    `, [session.tutor_id, id, new_time]);
+
+    if (conflict.rows.length > 0) {
+      return res.status(400).json({ error: 'Tutor has another session at that time.' });
+    }
+
+    // Update the session time
+    await pool.query(`
+      UPDATE sessions
+      SET scheduled_time = $1
+      WHERE id = $2
+    `, [new_time, id]);
+
+    res.json({ message: 'Session rescheduled successfully.' });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reschedule session.' });
+  }
+});

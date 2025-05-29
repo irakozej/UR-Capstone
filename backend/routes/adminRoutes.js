@@ -197,3 +197,21 @@ router.get('/admin/export/sessions', verifyToken, isAdmin, async (req, res) => {
     res.status(500).json({ error: 'Failed to export sessions.' });
   }
 });
+
+
+const sendEmail = require('../utils/sendEmail'); // if not already imported
+
+router.get('/admin/test-email', async (req, res) => {
+  try {
+    await sendEmail({
+      to: 'j.irakoze@alustudent.com', // send to yourself
+      subject: '🎉 Test Email from TutorConnect',
+      text: 'This is a successful test email from your Node.js backend. Congrats!'
+    });
+
+    res.json({ message: '✅ Email sent successfully!' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '❌ Failed to send email.' });
+  }
+});
