@@ -77,23 +77,39 @@ router.post('/sessions/book', verifyToken, async (req, res) => {
 router.get('/sessions/my', verifyToken, async (req, res) => {
   try {
     const column = req.user.role === 'tutor' ? 'tutor_id' : 'student_id';
+    const filter = req.query.status; // e.g., ?status=completed
 
-    const result = await pool.query(
-      `SELECT s.*, u.full_name AS tutor_name, st.name AS subject
-       FROM sessions s
-       JOIN users u ON u.id = s.tutor_id
-       JOIN subjects st ON st.id = s.subject_id
-       WHERE s.${column} = $1
-       ORDER BY scheduled_time DESC`,
-      [req.user.id]
-    );
+    let query = `
+      SELECT s.*, 
+             u.full_name AS tutor_name, 
+             st.name AS subject
+      FROM sessions s
+      JOIN users u ON u.id = s.tutor_id
+      JOIN subjects st ON st.id = s.subject_id
+      WHERE s.${column} = $1
+    `;
+
+    const values = [req.user.id];
+
+    if (filter === 'completed') {
+      query += ' AND s.status = $2';
+      values.push('completed');
+    } else if (filter === 'upcoming') {
+      query += ' AND s.status = $2 AND s.scheduled_time > NOW()';
+      values.push('scheduled');
+    }
+
+    query += ' ORDER BY s.scheduled_time DESC';
+
+    const result = await pool.query(query, values);
 
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch sessions' });
+    res.status(500).json({ error: 'Failed to fetch session history' });
   }
 });
+
 
 // Tutor marks session as completed
 router.patch('/sessions/:id/complete', verifyToken, async (req, res) => {
@@ -249,3 +265,49 @@ router.patch('/sessions/:id/reschedule', verifyToken, async (req, res) => {
 });
 
 module.exports = router;
+
+router.get('/sessions/performance/overview', verifyToken, async (req, res) => {
+  if (req.user.role !== 'tutor') {
+    return res.status(403).json({ error: 'Only tutors can view this data.' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) AS total_sessions,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed_sessions,
+        ROUND(AVG(performance_score)::numeric, 2) AS average_score
+      FROM sessions
+      WHERE tutor_id = $1
+    `, [req.user.id]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load performance overview.' });
+  }
+});
+
+
+// Tutor performance overview
+router.get('/sessions/performance/overview', verifyToken, async (req, res) => {
+  if (req.user.role !== 'tutor') {
+    return res.status(403).json({ error: 'Only tutors can view this data.' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) AS total_sessions,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed_sessions,
+        ROUND(AVG(performance_score)::numeric, 2) AS average_score
+      FROM sessions
+      WHERE tutor_id = $1
+    `, [req.user.id]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load performance overview.' });
+  }
+});
