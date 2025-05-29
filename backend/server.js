@@ -31,3 +31,21 @@ app.use('/api', tutorApplicationRoutes);
 app.use('/api', adminRoutes);
 // This code imports and uses tutor application and admin routes from separate files.
 // It allows the server to handle requests related to tutor applications and admin functionalities.
+
+const studentRoutes = require('./routes/studentRoutes');
+app.use('/api', studentRoutes);
+// This code imports and uses student routes from a separate file.
+// It allows the server to handle requests related to student functionalities, such as fetching tutors and managing student-related data.
+
+const sessionRoutes = require('./routes/sessionRoutes');
+app.use('/api', sessionRoutes);
+// This code imports and uses session routes from a separate file.
+// It allows the server to handle requests related to booking and managing tutoring sessions, both for students and tutors.
+
+const tutorRoutes = require('./routes/tutorRoutes');
+app.use('/api', tutorRoutes);
+
+// Serve images statically
+app.use('/uploads', express.static('uploads'));
+// This code imports and uses tutor routes from a separate file.
+
