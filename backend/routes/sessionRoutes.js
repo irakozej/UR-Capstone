@@ -3,6 +3,9 @@ const router = express.Router();
 const pool = require('../models/db');
 const verifyToken = require('../middleware/verifyToken');
 const sendEmail = require('../utils/sendEmail');
+const path = require('path');
+const fs = require('fs');
+const format = require('fast-csv');
 
 // Student books a session
 router.post('/sessions/book', verifyToken, async (req, res) => {
@@ -138,8 +141,20 @@ router.patch('/sessions/:id/complete', verifyToken, async (req, res) => {
        WHERE id = $3`,
       [feedback || null, performance_score || null, id]
     );
-
+    
+    // 📩 Send feedback reminder to student
+    const [student] = await Promise.all([
+      pool.query('SELECT email, full_name FROM users WHERE id = $1', [session.rows[0].student_id])
+    ]);
+    
+    await sendEmail({
+      to: student.rows[0].email,
+      subject: '📝 Feedback Reminder: How was your session?',
+      text: `Hi ${student.rows[0].full_name},\n\nYour session with ${req.user.full_name || 'your tutor'} has been marked as completed.\n\nWe’d love to hear your feedback!`
+    });
+    
     res.json({ message: 'Session marked as completed.' });
+    
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to complete session.' });
@@ -309,5 +324,60 @@ router.get('/sessions/performance/overview', verifyToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load performance overview.' });
+  }
+});
+router.get('/sessions/export', verifyToken, async (req, res) => {
+  try {
+    const column = req.user.role === 'tutor' ? 'tutor_id' : 'student_id';
+
+    const result = await pool.query(`
+      SELECT s.id, s.scheduled_time, s.status, u.full_name AS tutor_name, st.name AS subject
+      FROM sessions s
+      JOIN users u ON u.id = s.tutor_id
+      JOIN subjects st ON st.id = s.subject_id
+      WHERE s.${column} = $1
+      ORDER BY scheduled_time DESC
+    `, [req.user.id]);
+
+    const filePath = path.join(__dirname, `../exports/sessions-${Date.now()}.csv`);
+    const writable = fs.createWriteStream(filePath);
+
+    format.write(result.rows, { headers: true }).pipe(writable).on('finish', () => {
+      res.download(filePath, 'sessions.csv', () => {
+        fs.unlinkSync(filePath); // delete after sending
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to export sessions' });
+  }
+});
+
+router.get('/sessions/performance/export', verifyToken, async (req, res) => {
+  if (req.user.role !== 'tutor') {
+    return res.status(403).json({ error: 'Only tutors can export performance data.' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) AS total_sessions,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed_sessions,
+        ROUND(AVG(performance_score)::numeric, 2) AS average_score
+      FROM sessions
+      WHERE tutor_id = $1
+    `, [req.user.id]);
+
+    const filePath = path.join(__dirname, `../exports/performance-${Date.now()}.csv`);
+    const writable = fs.createWriteStream(filePath);
+
+    format.write([result.rows[0]], { headers: true }).pipe(writable).on('finish', () => {
+      res.download(filePath, 'performance.csv', () => {
+        fs.unlinkSync(filePath);
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to export performance.' });
   }
 });
