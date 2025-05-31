@@ -164,3 +164,58 @@ router.get('/tutors/recommend', verifyToken, async (req, res) => {
     }
   });
   
+  router.get('/tutors/search', verifyToken, async (req, res) => {
+    const { location } = req.query;
+  
+    try {
+      let query = `
+        SELECT id, full_name, email, location, bio, profile_picture
+        FROM users
+        WHERE role = 'tutor'
+      `;
+      const values = [];
+  
+      if (location) {
+        query += ` AND LOWER(location) LIKE $1`;
+        values.push(`%${location.toLowerCase()}%`);
+      }
+  
+      const result = await pool.query(query, values);
+      res.json(result.rows);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to search tutors' });
+    }
+  });
+  
+  router.post('/reviews', verifyToken, async (req, res) => {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students can leave reviews.' });
+    }
+  
+    const { session_id, tutor_id, rating, comment } = req.body;
+  
+    try {
+      // Prevent duplicate reviews
+      const existing = await pool.query(
+        'SELECT * FROM reviews WHERE session_id = $1 AND student_id = $2',
+        [session_id, req.user.id]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'You already reviewed this session.' });
+      }
+  
+      // Insert review
+      const result = await pool.query(`
+        INSERT INTO reviews (session_id, student_id, tutor_id, rating, comment)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [session_id, req.user.id, tutor_id, rating, comment]);
+  
+      res.status(201).json({ message: 'Review submitted.', review: result.rows[0] });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to submit review.' });
+    }
+  });
+  

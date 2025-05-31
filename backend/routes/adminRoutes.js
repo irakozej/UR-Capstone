@@ -215,3 +215,40 @@ router.get('/admin/test-email', async (req, res) => {
     res.status(500).json({ error: '❌ Failed to send email.' });
   }
 });
+
+router.get('/admin/dashboard', verifyToken, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const [users, tutors, students, sessions, ratings, topTutors] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM users`),
+      pool.query(`SELECT COUNT(*) FROM users WHERE role = 'tutor'`),
+      pool.query(`SELECT COUNT(*) FROM users WHERE role = 'student'`),
+      pool.query(`SELECT COUNT(*) FROM sessions`),
+      pool.query(`SELECT ROUND(AVG(rating)::numeric, 2) FROM reviews`),
+      pool.query(`
+        SELECT u.full_name, COUNT(s.id) AS completed_sessions
+        FROM sessions s
+        JOIN users u ON u.id = s.tutor_id
+        WHERE s.status = 'completed'
+        GROUP BY u.id
+        ORDER BY completed_sessions DESC
+        LIMIT 3
+      `)
+    ]);
+
+    res.json({
+      total_users: parseInt(users.rows[0].count),
+      total_tutors: parseInt(tutors.rows[0].count),
+      total_students: parseInt(students.rows[0].count),
+      total_sessions: parseInt(sessions.rows[0].count),
+      average_rating: ratings.rows[0].round || 0,
+      top_tutors: topTutors.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load dashboard' });
+  }
+});

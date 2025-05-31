@@ -84,3 +84,21 @@ router.get('/tutors/:id/availability', async (req, res) => {
   }
 });
 
+router.get('/tutors/:id/reviews', async (req, res) => {
+  const tutorId = req.params.id;
+
+  try {
+    const result = await pool.query(`
+      SELECT r.*, u.full_name AS student_name
+      FROM reviews r
+      JOIN users u ON u.id = r.student_id
+      WHERE r.tutor_id = $1
+      ORDER BY r.created_at DESC
+    `, [tutorId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
