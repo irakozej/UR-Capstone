@@ -165,19 +165,34 @@ router.get('/tutors/recommend', verifyToken, async (req, res) => {
   });
   
   router.get('/tutors/search', verifyToken, async (req, res) => {
-    const { location } = req.query;
+    const { location, min_price, max_price } = req.query;
   
     try {
       let query = `
-        SELECT id, full_name, email, location, bio, profile_picture
+        SELECT id, full_name, email, location, bio, profile_picture, pricing
         FROM users
         WHERE role = 'tutor'
       `;
       const values = [];
+      const conditions = [];
   
       if (location) {
-        query += ` AND LOWER(location) LIKE $1`;
+        conditions.push(`LOWER(location) LIKE $${values.length + 1}`);
         values.push(`%${location.toLowerCase()}%`);
+      }
+  
+      if (min_price) {
+        conditions.push(`pricing >= $${values.length + 1}`);
+        values.push(parseFloat(min_price));
+      }
+  
+      if (max_price) {
+        conditions.push(`pricing <= $${values.length + 1}`);
+        values.push(parseFloat(max_price));
+      }
+  
+      if (conditions.length > 0) {
+        query += ` AND ` + conditions.join(' AND ');
       }
   
       const result = await pool.query(query, values);
@@ -187,6 +202,7 @@ router.get('/tutors/recommend', verifyToken, async (req, res) => {
       res.status(500).json({ error: 'Failed to search tutors' });
     }
   });
+  
   
   router.post('/reviews', verifyToken, async (req, res) => {
     if (req.user.role !== 'student') {

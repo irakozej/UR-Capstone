@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../models/db');
+const verifyToken = require('../middleware/verifyToken');
+
 
 // Public tutor application form
 router.post('/tutors/apply', async (req, res) => {
@@ -26,5 +28,27 @@ router.post('/tutors/apply', async (req, res) => {
     res.status(500).json({ error: 'Submission failed' });
   }
 });
+
+router.patch('/tutors/profile', verifyToken, async (req, res) => {
+  if (req.user.role !== 'tutor') {
+    return res.status(403).json({ error: 'Only tutors can update their profile.' });
+  }
+
+  const { bio, location, pricing } = req.body;
+
+  try {
+    await pool.query(`
+      UPDATE users
+      SET bio = $1, location = $2, pricing = $3
+      WHERE id = $4
+    `, [bio || null, location || null, pricing || null, req.user.id]);
+
+    res.json({ message: 'Profile updated successfully.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
 
 module.exports = router;
