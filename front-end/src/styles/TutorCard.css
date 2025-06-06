@@ -1,0 +1,26 @@
+.tutor-card-wrapper {
+    padding: 0.5rem;
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .tutor-card-wrapper:hover {
+    transform: scale(1.02);
+  }
+  
+  .tutor-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .tutor-img {
+    height: 220px;
+    object-fit: cover;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .tutor-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  

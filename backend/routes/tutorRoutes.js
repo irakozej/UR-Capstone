@@ -116,4 +116,35 @@ router.get('/tutors/:id/reviews', async (req, res) => {
   }
 });
 
+// Get single tutor by ID
+router.get('/tutors/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.full_name, u.bio, u.profile_picture, u.location, u.pricing,
+             ts.experience_years, ts.rating, s.name AS subject
+      FROM users u
+      JOIN tutor_subjects ts ON ts.tutor_id = u.id
+      JOIN subjects s ON s.id = ts.subject_id
+      WHERE u.id = $1 AND u.role = 'tutor'
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tutor not found.' });
+    }
+
+    const tutor = result.rows[0];
+    tutor.profile_picture = tutor.profile_picture
+      ? `${req.protocol}://${req.get('host')}${tutor.profile_picture}`
+      : null;
+
+    res.json(tutor);
+  } catch (err) {
+    console.error('Failed to fetch tutor by ID:', err);
+    res.status(500).json({ error: 'Failed to fetch tutor profile.' });
+  }
+});
+
+
 module.exports = router; // ✅ Export at the very end
