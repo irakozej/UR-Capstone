@@ -35,21 +35,32 @@ router.post('/tutors/upload-picture', verifyToken, upload.single('profile'), asy
   }
 });
 
-module.exports = router;
+// ✅ Get all tutors
+router.get('/tutors', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, full_name, bio, location, price, profile_picture
+      FROM users
+      WHERE role = 'tutor'
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch tutor error:', err);
+    res.status(500).json({ error: 'Failed to fetch tutors' });
+  }
+});
 
-
+// ✅ Add tutor availability
 router.post('/tutors/availability', verifyToken, async (req, res) => {
   if (req.user.role !== 'tutor') {
     return res.status(403).json({ error: 'Only tutors can update availability.' });
   }
 
-  const { slots } = req.body; // Expecting array of { day_of_week, start_time, end_time }
+  const { slots } = req.body;
 
   try {
-    // Remove existing availability
     await pool.query('DELETE FROM tutor_availability WHERE tutor_id = $1', [req.user.id]);
 
-    // Insert new slots
     for (const slot of slots) {
       await pool.query(
         `INSERT INTO tutor_availability (tutor_id, day_of_week, start_time, end_time)
@@ -65,6 +76,7 @@ router.post('/tutors/availability', verifyToken, async (req, res) => {
   }
 });
 
+// ✅ Get availability by tutor ID
 router.get('/tutors/:id/availability', async (req, res) => {
   const { id } = req.params;
 
@@ -84,6 +96,7 @@ router.get('/tutors/:id/availability', async (req, res) => {
   }
 });
 
+// ✅ Get reviews for a tutor
 router.get('/tutors/:id/reviews', async (req, res) => {
   const tutorId = req.params.id;
 
@@ -102,3 +115,5 @@ router.get('/tutors/:id/reviews', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
+
+module.exports = router; // ✅ Export at the very end
