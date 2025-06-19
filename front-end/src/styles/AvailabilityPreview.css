@@ -1,0 +1,25 @@
+/* styles/AvailabilityPreview.css */
+.availability-preview {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #f9f9f9;
+  }
+  
+  .availability-preview h5 {
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+    color: #333;
+  }
+  
+  .availability-preview ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .availability-preview li {
+    padding: 4px 0;
+    font-size: 0.95rem;
+    color: #555;
+  }
+  

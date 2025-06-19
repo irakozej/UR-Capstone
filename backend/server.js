@@ -46,6 +46,8 @@ app.use('/api', sessionRoutes);
 const tutorRoutes = require('./routes/tutorRoutes');
 app.use('/api', tutorRoutes);
 
+
+
 // Serve images statically
 app.use('/uploads', express.static('uploads'));
 // This code imports and uses tutor routes from a separate file.

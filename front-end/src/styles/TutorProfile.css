@@ -1,0 +1,50 @@
+.profile-container {
+    max-width: 800px;
+    margin: auto;
+    padding: 2rem;
+    background: #f9f9f9;
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  }
+  
+  .profile-header {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+  
+  .profile-pic {
+    width: 150px;
+    height: 150px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid #ccc;
+  }
+  
+  .subject-tag {
+    display: inline-block;
+    background-color: #d0ebff;
+    color: #0b7285;
+    padding: 6px 12px;
+    border-radius: 12px;
+    margin-top: 10px;
+    font-weight: 600;
+  }
+  
+  .reviews-section {
+    margin-top: 2rem;
+  }
+  
+  .review-list {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .review-list li {
+    margin-bottom: 1rem;
+    background: #fff;
+    padding: 1rem;
+    border-radius: 12px;
+    border-left: 4px solid #51cf66;
+  }
+  

@@ -223,4 +223,109 @@ router.post('/reviews', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/students/sessions/upcoming
+router.get('/students/sessions/upcoming', verifyToken, async (req, res) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({ error: 'Only students can view this.' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT 
+        s.id, s.scheduled_time, s.status,
+        t.full_name AS tutor_name,
+        sub.name AS subject
+      FROM sessions s
+      JOIN users t ON t.id = s.tutor_id
+      JOIN subjects sub ON sub.id = s.subject_id
+      WHERE s.student_id = $1 AND s.scheduled_time > NOW()
+      ORDER BY s.scheduled_time ASC
+    `, [req.user.id]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch upcoming sessions' });
+  }
+});
+// PATCH /api/sessions/:id/cancel
+router.patch('/sessions/:id/cancel', verifyToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await pool.query(
+      'UPDATE sessions SET status = $1 WHERE id = $2',
+      ['cancelled', id]
+    );
+    res.json({ message: 'Session cancelled.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to cancel session.' });
+  }
+});
+// PATCH /api/sessions/:id/reschedule
+router.patch('/sessions/:id/reschedule', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { new_time } = req.body;
+
+  try {
+    await pool.query(
+      'UPDATE sessions SET scheduled_time = $1 WHERE id = $2',
+      [new_time, id]
+    );
+    res.json({ message: 'Session rescheduled.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reschedule session.' });
+  }
+});
+// POST /api/sessions/:id/feedback
+router.post('/sessions/:id/feedback', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+
+  try {
+    await pool.query(
+      `UPDATE sessions SET feedback = $1, performance_score = $2
+       WHERE id = $3`,
+      [comment, rating, id]
+    );
+
+    res.json({ message: 'Feedback submitted.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to submit feedback.' });
+  }
+});
+// 
+
+// ✅ Update student profile
+router.put('/students/profile', verifyToken, async (req, res) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({ error: 'Access denied. Only students can update profile.' });
+  }
+
+  const { full_name, learning_style, bio, location } = req.body;
+
+  try {
+    await pool.query(
+      `UPDATE users SET
+        full_name = $1,
+        learning_style = $2,
+        bio = $3,
+        location = $4
+      WHERE id = $5`,
+      [full_name, learning_style, bio, location, req.user.id]
+    );
+
+    res.json({ message: 'Profile updated successfully.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
+module.exports = router;
+
+
 module.exports = router;

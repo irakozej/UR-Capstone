@@ -1,18 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Modal, Button, Form } from 'react-bootstrap';
+import '../styles/TutorProfile.css'; // Make sure this file exists
 
 function TutorProfile() {
   const { id } = useParams();
+  const [tutor, setTutor] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [availability, setAvailability] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [scheduledTime, setScheduledTime] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
-  const [availability, setAvailability] = useState([]);
-  const [tutor, setTutor] = useState(null);
-  const [reviews, setReviews] = useState([]);
 
-  const navigate = useNavigate();
+  const fetchTutor = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/tutors/${id}`);
+      setTutor(res.data);
+    } catch (err) {
+      console.error('Failed to load tutor:', err);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/tutors/${id}/reviews`);
+      setReviews(res.data);
+    } catch (err) {
+      console.error('Failed to load reviews:', err);
+    }
+  };
+
+  const fetchAvailability = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/tutors/${id}/availability`);
+      setAvailability(res.data);
+    } catch (err) {
+      console.error('Failed to load availability:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTutor();
+    fetchReviews();
+    fetchAvailability();
+  }, [id]);
 
   const handleBookNow = () => {
     setShowModal(true);
@@ -21,8 +53,31 @@ function TutorProfile() {
   };
 
   const handleBookingSubmit = async () => {
+    const selectedDate = new Date(scheduledTime);
+    const now = new Date();
+
+    if (selectedDate <= now) {
+      setBookingMessage('❌ You cannot book a session in the past.');
+      return;
+    }
+
+    // Optional: Check if the selected time matches any availability slot
+    const selectedDay = selectedDate.getDay();
+    const selectedHour = selectedDate.getHours();
+
+    const isAvailable = availability.some(slot => {
+      const start = parseInt(slot.start_time.split(':')[0]);
+      const end = parseInt(slot.end_time.split(':')[0]);
+      return slot.day_of_week === selectedDay && selectedHour >= start && selectedHour < end;
+    });
+
+    if (!isAvailable) {
+      setBookingMessage("❌ This time is outside the tutor's availability.");
+      return;
+    }
+
     try {
-      const res = await axios.post('http://localhost:5000/api/sessions/book', {
+      await axios.post('http://localhost:5000/api/sessions/book', {
         tutor_id: tutor.id,
         subject_id: tutor.subject_id || 2,
         scheduled_time: scheduledTime
@@ -40,36 +95,20 @@ function TutorProfile() {
     }
   };
 
-  useEffect(() => {
-    const fetchTutor = async () => {
-      const res = await axios.get(`http://localhost:5000/api/tutors/${id}`);
-      setTutor(res.data);
-    };
-
-    const fetchReviews = async () => {
-      const res = await axios.get(`http://localhost:5000/api/tutors/${id}/reviews`);
-      setReviews(res.data);
-    };
-
-    const fetchAvailability = async () => {
-      const res = await axios.get(`http://localhost:5000/api/tutors/${id}/availability`);
-      setAvailability(res.data);
-    };
-
-    fetchTutor();
-    fetchReviews();
-    fetchAvailability();
-  }, [id]);
-
-  if (!tutor) return <div>Loading...</div>;
+  if (!tutor) return <div className="container py-5">Loading...</div>;
 
   return (
     <div className="container py-5">
       <h2>{tutor.full_name}</h2>
       {tutor.profile_picture && (
-        <img src={tutor.profile_picture} alt="profile" style={{ width: '200px', borderRadius: '10px' }} />
+        <img
+          src={tutor.profile_picture}
+          alt="profile"
+          className="tutor-profile-picture"
+        />
       )}
       <p><strong>Subject:</strong> {tutor.subject}</p>
+      <p><strong>Price:</strong> ${tutor.price || tutor.pricing || 0}/hour</p>
       <p><strong>Experience:</strong> {tutor.experience_years} years</p>
       <p><strong>Rating:</strong> {tutor.rating}</p>
       <p><strong>Bio:</strong> {tutor.bio}</p>
@@ -99,32 +138,10 @@ function TutorProfile() {
           <Form>
             <Form.Group>
               <Form.Label>Select Time</Form.Label>
-              <small className="text-muted d-block mb-2">
-                Only available times can be selected. Based on tutor schedule.
-              </small>
               <Form.Control
                 type="datetime-local"
                 value={scheduledTime}
-                onChange={(e) => {
-                  const selected = new Date(e.target.value);
-                  const day = selected.toLocaleString('en-US', { weekday: 'long' });
-                  const time = selected.toTimeString().split(':').slice(0, 2).join(':') + ':00';
-
-                  const match = availability.find(
-                    slot =>
-                      slot.day_of_week === day &&
-                      slot.start_time <= time &&
-                      slot.end_time > time
-                  );
-
-                  if (match) {
-                    setScheduledTime(e.target.value);
-                    setBookingMessage('');
-                  } else {
-                    setScheduledTime('');
-                    setBookingMessage('❌ Tutor is not available at this time. Please select a different slot.');
-                  }
-                }}
+                onChange={(e) => setScheduledTime(e.target.value)}
               />
             </Form.Group>
             {bookingMessage && <p className="mt-3">{bookingMessage}</p>}

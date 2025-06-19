@@ -1,0 +1,179 @@
+/* StudentDashboard.css */
+
+.student-dashboard {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* === SIDEBAR === */
+.student-sidebar {
+  width: 240px;
+    background-color: #2c3e50;
+    color: white;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.student-sidebar h2 {
+  font-size: 1.4rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.student-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.student-sidebar nav a {
+  color: #d1d5db;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.student-sidebar nav a:hover,
+.student-sidebar nav a.active {
+  background-color: #102c57;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Logout Button */
+.logout-btn {
+  background-color: #d75252;
+  border: none;
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: 0.2s;
+  width: 100%;
+  text-align: center;
+}
+
+.logout-btn:hover {
+  background-color: #c74e4e;
+  border-color: #f87171;
+  color: #fff;
+}
+
+/* === MAIN CONTENT === */
+.student-main {
+  flex-grow: 1;
+  background-color: #16181c;
+  padding: 2rem;
+}
+
+.student-main h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+}
+
+.student-main .card {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+  margin-bottom: 1.5rem;
+}
+
+.student-main .card h3 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: #374151;
+}
+
+/* Table styles (for upcoming sessions) */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.table th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  color: #374151;
+}
+
+.table td {
+  background-color: #fff;
+  color: #4b5563;
+}
+/* Sidebar Navigation */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  
+}
+
+.nav-btn{
+  display: flex;
+  align-items: center;
+  justify-content:center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background-color: #2c3e50; /* Blue background */
+  color: #ffffff; /* White text */
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s;
+}
+.nav-btn:hover {
+  background-color: #34495e; /* Darker blue on hover */
+  color: #ffffff; /* Keep text white on hover */
+}
+.sidebar-nav a {
+  display: block;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #9c9c9c;
+  text-decoration: none;
+  transition: background 0.3s, color 0.3s;
+}
+
+.sidebar-nav a:hover {
+  background-color: #030303;
+  color: #ffffff;
+}
+
+.sidebar-nav a.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 5px rgba(37, 99, 235, 0.4);
+}
+.sidebar-nav a i {
+  margin-right: 0.5rem;
+  color: #60a5fa; /* Light blue for icons */
+}
+.sidebar-nav a.active i {
+  color: #ffffff; /* White for active icon */
+}
+/* Responsive Design */
