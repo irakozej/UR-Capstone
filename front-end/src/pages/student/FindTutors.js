@@ -1,4 +1,3 @@
-// src/pages/student/FindTutors.js
 import React, { useEffect, useState } from 'react';
 import TutorCard from '../../components/TutorCard';
 import axios from 'axios';
@@ -12,6 +11,7 @@ function FindTutors() {
     const fetchTutors = async () => {
       try {
         const res = await axios.get('http://localhost:5000/api/tutors');
+        console.log("Fetched tutors:", res.data); // ✅ Debugging aid
         setTutors(res.data);
       } catch (err) {
         console.error('Failed to fetch tutors', err);
@@ -21,15 +21,26 @@ function FindTutors() {
     fetchTutors();
   }, []);
 
-  const filteredTutors = tutors.filter(tutor =>
-    (tutor.subject || '').toLowerCase().includes(filters.subject.toLowerCase()) &&
-    (tutor.bio || '').toLowerCase().includes(filters.location.toLowerCase()) &&
-    (!filters.price || tutor.price <= parseFloat(filters.price))
-  );
+  const filteredTutors = tutors.filter((tutor) => {
+    const subjectMatch = filters.subject
+      ? (tutor.subject || '').toLowerCase().includes(filters.subject.toLowerCase())
+      : true;
+
+    const locationMatch = filters.location
+      ? (tutor.location || '').toLowerCase().includes(filters.location.toLowerCase())
+      : true;
+
+    const priceMatch = filters.price
+      ? parseFloat(tutor.price) <= parseFloat(filters.price)
+      : true;
+
+    return subjectMatch && locationMatch && priceMatch;
+  });
 
   return (
     <div className="container py-4">
       <h2 className="mb-4">🔍 Explore Tutors</h2>
+
       <div className="row mb-4">
         <div className="col-md-4 mb-2">
           <input
@@ -61,12 +72,15 @@ function FindTutors() {
       </div>
 
       <div className="row">
-        {filteredTutors.map((tutor, index) => (
-          <div className="col-md-6 col-lg-4" key={index}>
-            <TutorCard tutor={tutor} onBook={() => {}} />
-            
-          </div>
-        ))}
+        {filteredTutors.length > 0 ? (
+          filteredTutors.map((tutor, index) => (
+            <div className="col-md-6 col-lg-4" key={index}>
+              <TutorCard tutor={tutor} onBook={() => {}} />
+            </div>
+          ))
+        ) : (
+          <p className="text-muted">No tutors found. Try adjusting filters.</p>
+        )}
       </div>
     </div>
   );

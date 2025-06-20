@@ -5,7 +5,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const pool = require('../models/db');
 
-// ✅ Setup multer for file upload
+// ✅ Setup multer
 const storage = multer.diskStorage({
   destination: './uploads/',
   filename: (req, file, cb) => {
@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ✅ Tutor Application Route
+// ✅ Tutor Application (signup)
 router.post('/tutors/apply', upload.single('profile_picture'), async (req, res) => {
   try {
     const {
@@ -31,25 +31,21 @@ router.post('/tutors/apply', upload.single('profile_picture'), async (req, res) 
       return res.status(400).json({ error: 'All fields are required.' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Check for duplicates
+    const existing = await pool.query('SELECT 1 FROM tutor_applications WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already used for application.' });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
     const profilePicturePath = req.file ? `/uploads/${req.file.filename}` : null;
 
-    // ✅ Match this to your actual table columns
     await pool.query(`
       INSERT INTO tutor_applications
-        (full_name, email, password, bio, location, subject, price, profile_picture, status, created_at)
+        (full_name, email, password_hash, bio, location, subject, price, profile_picture, status, created_at)
       VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW())
-    `, [
-      full_name,
-      email,
-      hashedPassword,
-      bio,
-      location,
-      subject,
-      price,
-      profilePicturePath
-    ]);
+    `, [full_name, email, hashed, bio, location, subject, price, profilePicturePath]);
 
     res.json({ message: '✅ Application submitted successfully. Awaiting admin approval.' });
 

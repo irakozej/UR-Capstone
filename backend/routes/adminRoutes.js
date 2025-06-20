@@ -7,6 +7,7 @@ const { Parser } = require('json2csv');
 const sendEmail = require('../utils/sendEmail');
 const bcrypt = require('bcrypt');
 
+// Middleware to allow only admins
 function isAdmin(req, res, next) {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access only.' });
@@ -14,6 +15,7 @@ function isAdmin(req, res, next) {
   next();
 }
 
+// Dashboard stats
 router.get('/admin/dashboard', verifyToken, isAdmin, async (req, res) => {
   try {
     const [users, tutors, students, sessions, ratings, topTutors, pending] = await Promise.all([
@@ -49,6 +51,7 @@ router.get('/admin/dashboard', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Get pending tutors
 router.get('/admin/pending-tutors', verifyToken, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -64,25 +67,44 @@ router.get('/admin/pending-tutors', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// ✅ Approve tutor
 router.patch('/admin/approve-tutor/:id', verifyToken, isAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Update status in tutor_applications
     await pool.query(`UPDATE tutor_applications SET status = 'approved' WHERE id = $1`, [id]);
 
+    // Fetch tutor info
     const result = await pool.query(`SELECT * FROM tutor_applications WHERE id = $1`, [id]);
     const tutor = result.rows[0];
 
-    const hashed = await bcrypt.hash(tutor.password_hash || 'Temp123!', 10);
+    if (!tutor) return res.status(404).json({ error: 'Tutor not found.' });
+
+    // ✅ Use the already hashed password
+    const hashed = tutor.password_hash;
+
     await pool.query(`
-      INSERT INTO users (full_name, email, password_hash, role, bio, location, subject, price, profile_picture, approved)
+      INSERT INTO users (
+        full_name, email, password_hash, role,
+        bio, location, subject, price, profile_picture, approved
+      )
       VALUES ($1, $2, $3, 'tutor', $4, $5, $6, $7, $8, true)
-    `, [tutor.full_name, tutor.email, hashed, tutor.bio, tutor.location, tutor.subject, tutor.price, tutor.profile_picture]);
+    `, [
+      tutor.full_name,
+      tutor.email,
+      hashed,
+      tutor.bio,
+      tutor.location,
+      tutor.subject,
+      tutor.price,
+      tutor.profile_picture
+    ]);
 
     await sendEmail({
       to: tutor.email,
       subject: '🎉 Your Tutor Application was Approved!',
-      text: `Hello ${tutor.full_name},\n\nYour tutor application has been approved. You may now log into your account.\n\nTutorConnect Team`
+      text: `Hello ${tutor.full_name},\n\nYour tutor application has been approved. You may now log in at TutorConnect.\n\nBest,\nTutorConnect Team`
     });
 
     res.json({ message: 'Tutor approved and registered.' });
@@ -92,6 +114,7 @@ router.patch('/admin/approve-tutor/:id', verifyToken, isAdmin, async (req, res) 
   }
 });
 
+// ❌ Reject tutor
 router.delete('/admin/reject-tutor/:id', verifyToken, isAdmin, async (req, res) => {
   const { id } = req.params;
 
@@ -99,11 +122,13 @@ router.delete('/admin/reject-tutor/:id', verifyToken, isAdmin, async (req, res) 
     const result = await pool.query('SELECT email, full_name FROM tutor_applications WHERE id = $1', [id]);
     const tutor = result.rows[0];
 
-    await sendEmail({
-      to: tutor.email,
-      subject: '❌ Tutor Application Rejected',
-      text: `Dear ${tutor.full_name},\n\nWe regret to inform you that your tutor application has been rejected.`
-    });
+    if (tutor) {
+      await sendEmail({
+        to: tutor.email,
+        subject: '❌ Tutor Application Rejected',
+        text: `Dear ${tutor.full_name},\n\nWe regret to inform you that your tutor application has been rejected.`
+      });
+    }
 
     await pool.query('UPDATE tutor_applications SET status = $1 WHERE id = $2', ['rejected', id]);
     res.json({ message: 'Tutor rejected and notified.' });
@@ -113,6 +138,7 @@ router.delete('/admin/reject-tutor/:id', verifyToken, isAdmin, async (req, res) 
   }
 });
 
+// View approved tutors
 router.get('/admin/tutors', verifyToken, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -128,6 +154,7 @@ router.get('/admin/tutors', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// View students
 router.get('/admin/students', verifyToken, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -143,6 +170,7 @@ router.get('/admin/students', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// View all sessions
 router.get('/admin/sessions', verifyToken, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -166,6 +194,7 @@ router.get('/admin/sessions', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Export users to CSV
 router.get('/admin/export/users', verifyToken, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -184,6 +213,7 @@ router.get('/admin/export/users', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Export sessions to CSV
 router.get('/admin/export/sessions', verifyToken, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -212,6 +242,7 @@ router.get('/admin/export/sessions', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Test email route
 router.get('/admin/test-email', async (req, res) => {
   try {
     await sendEmail({

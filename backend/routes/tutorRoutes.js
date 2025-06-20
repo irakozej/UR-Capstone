@@ -38,10 +38,10 @@ router.post('/tutors/apply', upload.single('profile_picture'), async (req, res) 
 
     await pool.query(`
       INSERT INTO tutor_applications
-        (full_name, email, password, bio, location, subject, price, profile_picture, status, created_at)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW())
+        (full_name, email, password_hash, bio, location, subject, price, profile_picture, status, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW())
     `, [full_name, email, hashed, bio, location, subject, price, profilePicturePath]);
+    
 
     res.json({ message: '✅ Application submitted successfully. Awaiting admin approval.' });
 
@@ -74,18 +74,22 @@ router.post('/tutors/upload-picture', verifyToken, upload.single('profile'), asy
 });
 
 
-// ✅ Get all tutors
+// ✅ Get all approved tutors for students
 router.get('/tutors', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT id, full_name, bio, location, subject, price, profile_picture
       FROM users
-      WHERE role = 'tutor'
+      WHERE role = 'tutor' AND approved IS TRUE
     `);
 
     const tutors = result.rows.map(t => ({
       ...t,
-      profile_picture: t.profile_picture ? `${req.protocol}://${req.get('host')}${t.profile_picture}` : null
+      profile_picture: t.profile_picture?.startsWith('http')
+        ? t.profile_picture
+        : t.profile_picture
+          ? `${req.protocol}://${req.get('host')}${t.profile_picture}`
+          : null
     }));
 
     res.json(tutors);
@@ -94,6 +98,8 @@ router.get('/tutors', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tutors' });
   }
 });
+
+
 
 
 // ✅ Get single tutor by ID
