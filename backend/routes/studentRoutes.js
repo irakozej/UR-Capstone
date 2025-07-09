@@ -4,7 +4,7 @@ const pool = require('../models/db');
 const verifyToken = require('../middleware/verifyToken');
 
 // ✅ GET all approved tutors with filters
-router.get('/tutors', async (req, res) => {
+router.get('/students/tutors', async (req, res) => {
   const { subject, location, min_experience } = req.query;
 
   try {
@@ -50,7 +50,7 @@ router.get('/tutors', async (req, res) => {
 });
 
 // ✅ GET top tutors
-router.get('/tutors/top', async (req, res) => {
+router.get('/students/tutors/top', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -87,7 +87,7 @@ router.get('/tutors/top', async (req, res) => {
 });
 
 // ✅ Smart match: Recommend top tutors based on subject + student bio
-router.get('/tutors/recommend', verifyToken, async (req, res) => {
+router.get('/students/tutors/recommend', verifyToken, async (req, res) => {
   const { subject } = req.query;
 
   if (req.user.role !== 'student') {
@@ -154,7 +154,7 @@ router.get('/tutors/recommend', verifyToken, async (req, res) => {
 });
 
 // ✅ Search tutors by location and price
-router.get('/tutors/search', verifyToken, async (req, res) => {
+router.get('/students/tutors/search', verifyToken, async (req, res) => {
   const { location, min_price, max_price } = req.query;
 
   try {
@@ -194,7 +194,7 @@ router.get('/tutors/search', verifyToken, async (req, res) => {
 });
 
 // ✅ Student leaves a review
-router.post('/reviews', verifyToken, async (req, res) => {
+router.post('/students/reviews', verifyToken, async (req, res) => {
   if (req.user.role !== 'student') {
     return res.status(403).json({ error: 'Only students can leave reviews.' });
   }

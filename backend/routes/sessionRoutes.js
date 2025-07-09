@@ -27,7 +27,7 @@ router.post('/sessions/book', verifyToken, async (req, res) => {
       [tutor_id, dayOfWeek, sessionHour]
     );
 
-    if (availabilityResult.rows.length === 0) {
+    if (availabilityResult.rows.length != 0) {
       return res.status(400).json({ error: 'Tutor is not available at this time.' });
     }
 
@@ -77,7 +77,7 @@ router.post('/sessions/book', verifyToken, async (req, res) => {
 });
 
 // Student or Tutor views their sessions
-router.get('/sessions/my', verifyToken, async (req, res) => {
+router.get('/students/me/sessions/', verifyToken, async (req, res) => {
   try {
     const column = req.user.role === 'tutor' ? 'tutor_id' : 'student_id';
     const filter = req.query.status; // e.g., ?status=completed
@@ -112,6 +112,46 @@ router.get('/sessions/my', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch session history' });
   }
 });
+router.get('/tutors/me/sessions', verifyToken, async (req, res) => {
+  try {
+    // Ensure only tutors can access this endpoint
+    if (req.user.role !== 'tutor') {
+      return res.status(403).json({ error: 'Access denied. Tutors only.' });
+    }
+
+    const filter = req.query.status; // e.g., ?status=completed
+
+    let query = `
+      SELECT s.*, 
+             u.full_name AS student_name, 
+             st.name AS subject
+      FROM sessions s
+      JOIN users u ON u.id = s.student_id
+      JOIN subjects st ON st.id = s.subject_id
+      WHERE s.tutor_id = $1
+    `;
+
+    const values = [req.user.id];
+
+    if (filter === 'completed') {
+      query += ' AND s.status = $2';
+      values.push('completed');
+    } else if (filter === 'upcoming') {
+      query += ' AND s.status = $2 AND s.scheduled_time > NOW()';
+      values.push('scheduled');
+    }
+
+    query += ' ORDER BY s.scheduled_time DESC';
+
+    const result = await pool.query(query, values);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch tutor sessions' });
+  }
+});
+
 
 
 // Tutor marks session as completed
